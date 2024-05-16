@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: FloatingActionButton(
           onPressed: () {},
           child: const Icon(Icons.add, color: Colors.white),
-          backgroundColor: const Color(0xFFF14A5B),
+          backgroundColor: const Color(0xCCF14A5B),
           shape: const CircleBorder(),
         ),
       ),
@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomAppBar(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           height: 60,
-          color: const Color(0xFFB19CEC),
+          color: const Color(0xCCB19CEC),
           shape: const CircularNotchedRectangle(),
           notchMargin: 5,
           child: Row(
