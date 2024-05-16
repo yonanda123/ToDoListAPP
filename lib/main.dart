@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:to_do_list_app/pages/dashboard.dart';
 import 'package:to_do_list_app/pages/profile.dart';
+import 'package:to_do_list_app/components/add_task_modal.dart';
 
 void main() {
   runApp(const MyApp());
@@ -42,15 +43,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_currentIndex],
-      floatingActionButton: Container(
-        width: 56.0,
-        height: 56.0,
-        child: FloatingActionButton(
-          onPressed: () {},
-          child: const Icon(Icons.add, color: Colors.white),
-          backgroundColor: const Color(0xCCF14A5B),
-          shape: const CircleBorder(),
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showCustomModalBottomSheet(context);
+        },
+        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: const Color(0xCCF14A5B),
+        shape: const CircleBorder(),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: ClipRRect(

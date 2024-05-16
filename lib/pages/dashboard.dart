@@ -1,6 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:timelines/timelines.dart';
 
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Delivery Timeline',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: Dashboard(),
+    );
+  }
+}
+
 class Dashboard extends StatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
 
@@ -11,6 +28,7 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   final DateTime _currentDate = DateTime.now();
   DateTime _selectedDate = DateTime.now();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,7 +84,6 @@ class _DashboardState extends State<Dashboard> {
                 bool isSelected = _selectedDate.day == date.day &&
                     _selectedDate.month == date.month &&
                     _selectedDate.year == date.year;
-
                 return GestureDetector(
                   onTap: () {
                     setState(() {
@@ -188,7 +205,24 @@ class _InnerTimeline extends StatelessWidget {
 
             return Padding(
               padding: EdgeInsets.only(left: 8.0),
-              child: Text(messages[index - 1].toString()),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(messages[index - 1].createdAt,
+                          style: TextStyle(
+                              fontFamily: 'PoppinsSemiBold', fontSize: 12)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(messages[index - 1].message,
+                            style: TextStyle(
+                                fontFamily: 'PoppinsLight', fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
           itemExtentBuilder: (_, index) => isEdgeIndex(index) ? 10.0 : 30.0,
@@ -242,8 +276,7 @@ class _DeliveryProcesses extends StatelessWidget {
                     Text(
                       processes[index].name,
                       style: DefaultTextStyle.of(context).style.copyWith(
-                            fontSize: 18.0,
-                          ),
+                          fontSize: 18.0, fontFamily: 'PoppinsSemiBold'),
                     ),
                     _InnerTimeline(messages: processes[index].messages),
                   ],
@@ -251,7 +284,7 @@ class _DeliveryProcesses extends StatelessWidget {
               );
             },
             indicatorBuilder: (_, index) {
-              if (processes[index].isCompleted) {
+              if (index == 0) {
                 return DotIndicator(
                   color: Color(0xCCF14A5B),
                   child: Icon(
@@ -261,13 +294,25 @@ class _DeliveryProcesses extends StatelessWidget {
                   ),
                 );
               } else {
-                return OutlinedDotIndicator(
-                  borderWidth: 2.5,
-                );
+                final process = processes[index - 1];
+                if (process.isCompleted) {
+                  return DotIndicator(
+                    color: Color(0xCCF14A5B),
+                    child: Icon(
+                      Icons.check,
+                      color: Colors.grey.withOpacity(0.3),
+                      size: 12.0,
+                    ),
+                  );
+                } else {
+                  return OutlinedDotIndicator(
+                    borderWidth: 2.5,
+                  );
+                }
               }
             },
             connectorBuilder: (_, index, ___) => SolidLineConnector(
-              color: processes[index].isCompleted ? Color(0xCCF14A5B) : null,
+              color: processes[index].isCompleted ? Colors.grey : null,
             ),
           ),
         ),
@@ -283,8 +328,50 @@ _OrderInfo _data(int id) => _OrderInfo(
         _DeliveryProcess(
           'Package Process',
           messages: [
-            _DeliveryMessage('8:30am', 'Package received by driver'),
+            _DeliveryMessage('8:30am', 'Package received by driver '),
             _DeliveryMessage('11:30am', 'Reached halfway mark'),
+          ],
+        ),
+        _DeliveryProcess(
+          'In Transit',
+          messages: [
+            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
+            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
+          ],
+        ),
+        _DeliveryProcess(
+          'In Transit',
+          messages: [
+            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
+            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
+          ],
+        ),
+        _DeliveryProcess(
+          'In Transit',
+          messages: [
+            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
+            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
+          ],
+        ),
+        _DeliveryProcess(
+          'In Transit',
+          messages: [
+            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
+            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
+          ],
+        ),
+        _DeliveryProcess(
+          'In Transit',
+          messages: [
+            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
+            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
+          ],
+        ),
+        _DeliveryProcess(
+          'In Transit',
+          messages: [
+            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
+            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
           ],
         ),
         _DeliveryProcess(
@@ -419,17 +506,6 @@ String _getDayAbbreviation(int day) {
       return 'Sa';
     case DateTime.sunday:
       return 'Su';
-    default:
-      return '';
-  }
-}
-
-String _getTime(int index) {
-  switch (index) {
-    case 0:
-      return '08 am';
-    case 1:
-      return '10 am';
     default:
       return '';
   }
