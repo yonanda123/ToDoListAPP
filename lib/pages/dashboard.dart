@@ -328,7 +328,8 @@ _OrderInfo _data(int id) => _OrderInfo(
         _DeliveryProcess(
           'Package Process',
           messages: [
-            _DeliveryMessage('8:30am', 'Package received by driver '),
+            _DeliveryMessage(
+                '8:30am', 'Package received by driver driver driver 1245'),
             _DeliveryMessage('11:30am', 'Reached halfway mark'),
           ],
         ),
