@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'select_time_page.dart';
 import 'add_description_page.dart';
 
@@ -12,25 +14,106 @@ class _AddTaskModalState extends State<AddTaskModal> {
   String title = '';
   List<bool> isSelected = [false, false, false, false];
   String? selectedTime;
+  bool showError = false;
+  bool isLoading = false;
+  String? titleError;
+  String? taskTypeError;
+  String? timeError;
+  String? descriptionError;
 
   void updateSelectedTime(String time) {
     setState(() {
       selectedTime = time;
+      timeError = null;
     });
   }
-
-  bool showError = false;
 
   void validateTitle(String value) {
     setState(() {
       if (value.length >= 30) {
-        showError = true;
+        titleError = 'Title cannot exceed 30 characters';
       } else {
-        showError = false;
+        titleError = null;
         title = value;
       }
     });
   }
+
+  void postTaskData() async {
+  bool valid = true;
+  if (title.isEmpty) {
+    setState(() {
+      titleError = 'Title is required';
+    });
+    valid = false;
+  }
+  if (isSelected.every((element) => !element)) {
+    setState(() {
+      taskTypeError = 'Task type is required';
+    });
+    valid = false;
+  }
+  if (selectedTime == null) {
+    setState(() {
+      timeError = 'Time is required';
+    });
+    valid = false;
+  }
+  if (description.isEmpty) {
+    setState(() {
+      descriptionError = 'Description is required';
+    });
+    valid = false;
+  }
+  if (!valid) return;
+
+  setState(() {
+    isLoading = true;
+  });
+
+  final taskTypes = ['Work', 'Meeting', 'Family', 'Me'];
+  String taskType = '';
+
+  for (int i = 0; i < isSelected.length; i++) {
+    if (isSelected[i]) {
+      taskType = taskTypes[i];
+      break;
+    }
+  }
+
+  final parts = selectedTime!.split('; ');
+  final timePart = parts[0]; 
+  final datePart = parts[1]; 
+
+  final url = Uri.parse(
+      'https://66465c4951e227f23aaeb737.mockapi.io/api/ToDoListApp/timeLine');
+  final response = await http.post(
+    url,
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: jsonEncode(<String, String>{
+      'title': title,
+      'taskType': taskType,
+      'time': timePart,
+      'date': datePart,
+      'description': description,
+    }),
+  );
+
+  setState(() {
+    isLoading = false;
+  });
+
+  if (response.statusCode == 201) {
+    Navigator.of(context).pop();
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to add task. Please try again.')),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -82,15 +165,13 @@ class _AddTaskModalState extends State<AddTaskModal> {
               ),
               Padding(
                 padding: const EdgeInsets.only(
-                    left: 32, top: 16, bottom: 32, right: 32),
+                    left: 32, top: 16, bottom: 8, right: 32),
                 child: TextField(
                   maxLines: null,
                   onChanged: (value) => validateTitle(value),
                   decoration: InputDecoration(
                     hintText: '   Enter task title...',
-                    errorText: showError
-                        ? 'Description cannot exceed 30 characters'
-                        : null,
+                    errorText: titleError,
                     errorStyle: TextStyle(
                       color: Colors.red,
                       fontSize: 12,
@@ -114,7 +195,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.only(left: 32),
+                padding: EdgeInsets.only(left: 32, top: 8),
                 child: Text(
                   'Task Type',
                   style: TextStyle(fontFamily: 'PoppinsBold', fontSize: 16),
@@ -122,7 +203,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
               ),
               Padding(
                 padding: const EdgeInsets.only(
-                    left: 24, top: 16, right: 16, bottom: 24),
+                    left: 24, top: 16, right: 16, bottom: 8),
                 child: SizedBox(
                   height: 50,
                   child: ListView(
@@ -138,6 +219,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                             for (int i = 0; i < isSelected.length; i++) {
                               isSelected[i] = i == 0;
                             }
+                            taskTypeError = null;
                           });
                         },
                       ),
@@ -151,6 +233,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                             for (int i = 0; i < isSelected.length; i++) {
                               isSelected[i] = i == 1;
                             }
+                            taskTypeError = null;
                           });
                         },
                       ),
@@ -164,6 +247,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                             for (int i = 0; i < isSelected.length; i++) {
                               isSelected[i] = i == 2;
                             }
+                            taskTypeError = null;
                           });
                         },
                       ),
@@ -177,6 +261,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                             for (int i = 0; i < isSelected.length; i++) {
                               isSelected[i] = i == 3;
                             }
+                            taskTypeError = null;
                           });
                         },
                       ),
@@ -184,8 +269,16 @@ class _AddTaskModalState extends State<AddTaskModal> {
                   ),
                 ),
               ),
+              if (taskTypeError != null)
+                Padding(
+                  padding: EdgeInsets.only(left: 32, bottom: 8),
+                  child: Text(
+                    taskTypeError!,
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
               Padding(
-                padding: EdgeInsets.only(left: 32, bottom: 16),
+                padding: EdgeInsets.only(left: 32, bottom: 16, top: 8),
                 child: Text(
                   'Total Detail',
                   style: TextStyle(fontFamily: 'PoppinsBold', fontSize: 16),
@@ -218,6 +311,14 @@ class _AddTaskModalState extends State<AddTaskModal> {
                   ),
                 ),
               ),
+              if (timeError != null)
+                Padding(
+                  padding: EdgeInsets.only(left: 32, bottom: 8),
+                  child: Text(
+                    timeError!,
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.only(left: 32, top: 6, right: 32),
                 child: GestureDetector(
@@ -227,6 +328,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                     if (result != null) {
                       setState(() {
                         description = result;
+                        descriptionError = null;
                       });
                     }
                   },
@@ -246,17 +348,28 @@ class _AddTaskModalState extends State<AddTaskModal> {
                   ),
                 ),
               ),
+              if (descriptionError != null)
+                Padding(
+                  padding: EdgeInsets.only(left: 32, bottom: 8),
+                  child: Text(
+                    descriptionError!,
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
               SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.only(
                     top: 16, left: 32, right: 32, bottom: 32),
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  icon: Icon(Icons.add, color: Colors.white),
+                  onPressed: isLoading ? null : postTaskData,
+                  icon: isLoading
+                      ? CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Icon(Icons.add, color: Colors.white),
                   label: Text(
-                    'Add',
+                    isLoading ? 'Adding...' : 'Add',
                     style: TextStyle(
                         fontFamily: 'PoppinsMedium',
                         fontSize: 16,

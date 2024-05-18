@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:timelines/timelines.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(MyApp());
@@ -28,6 +31,67 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   final DateTime _currentDate = DateTime.now();
   DateTime _selectedDate = DateTime.now();
+  bool _isLoading = true;
+  List<_DeliveryProcess> _deliveryProcesses = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeliveryProcesses();
+  }
+
+  Future<void> _loadDeliveryProcesses() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      String selectedDateFormatted =
+          DateFormat("MMM dd, yyyy").format(_selectedDate);
+      print(_selectedDate);
+      List<_DeliveryProcess> processes =
+          await fetchDeliveryProcesses(selectedDateFormatted);
+      processes.add(const _DeliveryProcess.complete());
+      setState(() {
+        _deliveryProcesses = processes;
+        _DeliveryProcess.complete();
+      });
+    } catch (e) {
+      print('Failed to load delivery processes: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<List<_DeliveryProcess>> fetchDeliveryProcesses(
+      String selectedDate) async {
+    final response = await http.get(Uri.parse(
+        'https://66465c4951e227f23aaeb737.mockapi.io/api/ToDoListApp/timeLine'));
+
+    if (response.statusCode == 200) {
+      List data = json.decode(response.body);
+
+      List<_DeliveryProcess> processes = [];
+      data.forEach((task) {
+        String addTime = task['time'];
+        if (task['date'] == selectedDate) {
+          processes.add(
+            _DeliveryProcess(
+              task['taskType'],
+              messages: [
+                _DeliveryMessage(addTime, task['title']),
+              ],
+            ),
+          );
+        }
+      });
+
+      return processes;
+    } else {
+      throw Exception('Failed to load tasks');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +135,7 @@ class _DashboardState extends State<Dashboard> {
       ),
       body: Column(
         children: [
+          Text('$_selectedDate'),
           Container(
             height: 145,
             padding: const EdgeInsets.symmetric(vertical: 20),
@@ -89,6 +154,7 @@ class _DashboardState extends State<Dashboard> {
                     setState(() {
                       _selectedDate = date;
                     });
+                    _loadDeliveryProcesses();
                   },
                   child: Container(
                     width: 70,
@@ -106,6 +172,7 @@ class _DashboardState extends State<Dashboard> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        // Text('$selectedDateFormatted'),
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: isSelected
@@ -146,20 +213,23 @@ class _DashboardState extends State<Dashboard> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemBuilder: (context, index) {
-                final data = _data(index + 1);
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _DeliveryProcesses(processes: data.deliveryProcesses),
-                    ],
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemBuilder: (context, index) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _DeliveryProcesses(
+                              processes: _deliveryProcesses,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    itemCount: 1,
                   ),
-                );
-              },
-              itemCount: 1,
-            ),
           ),
         ],
       ),
@@ -215,9 +285,14 @@ class _InnerTimeline extends StatelessWidget {
                               fontFamily: 'PoppinsSemiBold', fontSize: 12)),
                       SizedBox(width: 8),
                       Expanded(
-                        child: Text(messages[index - 1].message,
-                            style: TextStyle(
-                                fontFamily: 'PoppinsLight', fontSize: 12)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(messages[index - 1].message,
+                                style: TextStyle(
+                                    fontFamily: 'PoppinsLight', fontSize: 12)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -240,6 +315,7 @@ class _DeliveryProcesses extends StatelessWidget {
       : super(key: key);
 
   final List<_DeliveryProcess> processes;
+
   @override
   Widget build(BuildContext context) {
     return DefaultTextStyle(
@@ -320,78 +396,6 @@ class _DeliveryProcesses extends StatelessWidget {
     );
   }
 }
-
-_OrderInfo _data(int id) => _OrderInfo(
-      id: id,
-      date: DateTime.now(),
-      deliveryProcesses: [
-        _DeliveryProcess(
-          'Package Process',
-          messages: [
-            _DeliveryMessage(
-                '8:30am', 'Package received by driver driver driver 1245'),
-            _DeliveryMessage('11:30am', 'Reached halfway mark'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess(
-          'In Transit',
-          messages: [
-            _DeliveryMessage('13:00pm', 'Driver arrived at destination'),
-            _DeliveryMessage('11:35am', 'Package delivered by m.vassiliades'),
-          ],
-        ),
-        _DeliveryProcess.complete(),
-      ],
-    );
 
 class _OrderInfo {
   const _OrderInfo({

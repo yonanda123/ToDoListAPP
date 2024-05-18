@@ -48,10 +48,6 @@ class _AddDescriptionPageState extends State<AddDescriptionPage> {
                   color: Colors.red,
                   fontSize: 12,
                 ),
-                // border: OutlineInputBorder(
-                //   borderRadius: BorderRadius.circular(50),
-                //   borderSide: BorderSide(color: Color(0x80B19CEC)),
-                // ),
                 hintStyle: TextStyle(
                     fontSize: 16.0,
                     color: Color(0xd9B19CEC),

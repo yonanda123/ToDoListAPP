@@ -164,7 +164,7 @@ class _SelectTimePageState extends State<SelectTimePage> {
                     final selectedStartTime = startTime!.format(context);
                     final selectedEndTime = endTime!.format(context);
                     final result =
-                        '$selectedStartTime - $selectedEndTime, $selectedDateTime';
+                        '$selectedStartTime - $selectedEndTime; $selectedDateTime';
                     Navigator.of(context).pop(result);
                   }
                 },
