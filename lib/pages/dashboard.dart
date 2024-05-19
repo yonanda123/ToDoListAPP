@@ -5,20 +5,6 @@ import 'package:timelines/timelines.dart';
 import 'package:intl/intl.dart';
 import 'package:to_do_list_app/components/edit_task_modal.dart';
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Dashboard(),
-    );
-  }
-}
-
 class Dashboard extends StatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
 
@@ -43,11 +29,8 @@ class _DashboardState extends State<Dashboard> {
       _isLoading = true;
     });
     try {
-      String selectedDateFormatted =
-          DateFormat("MMM dd, yyyy").format(_selectedDate);
-      List<_DeliveryProcess> processes =
-          await fetchDeliveryProcesses(selectedDateFormatted);
-      // processes.add(const _DeliveryProcess.complete());
+      List<_DeliveryProcess> processes = await fetchDeliveryProcesses();
+      processes.add(const _DeliveryProcess.complete());
       setState(() {
         _deliveryProcesses = processes;
       });
@@ -60,18 +43,18 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-  Future<List<_DeliveryProcess>> fetchDeliveryProcesses(
-      String selectedDate) async {
+  Future<List<_DeliveryProcess>> fetchDeliveryProcesses() async {
     final response = await http.get(Uri.parse(
         'https://66465c4951e227f23aaeb737.mockapi.io/api/ToDoListApp/timeLine'));
-
+    String selectedDateFormatted =
+        DateFormat("MMM dd, yyyy").format(_selectedDate);
     if (response.statusCode == 200) {
       List data = json.decode(response.body);
 
       List<_DeliveryProcess> processes = [];
       data.forEach((task) {
         String addTime = task['time'];
-        if (task['date'] == selectedDate) {
+        if (task['date'] == selectedDateFormatted) {
           processes.add(
             _DeliveryProcess(
               task['taskType'],
@@ -478,9 +461,9 @@ class _DeliveryProcess {
     this.messages = const [],
   });
 
-  // const _DeliveryProcess.complete()
-  //     : this.name = 'Done',
-  //       this.messages = const [];
+  const _DeliveryProcess.complete()
+      : this.name = 'Done',
+        this.messages = const [];
 
   final String name;
   final List<_DeliveryMessage> messages;

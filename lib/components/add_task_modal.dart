@@ -109,17 +109,12 @@ class _AddTaskModalState extends State<AddTaskModal> {
     });
 
     if (response.statusCode == 201) {
-      // Menampilkan tampilan loading
       setState(() {
         isLoading = true;
       });
 
-      // Lakukan proses refresh data
       await Future.delayed(
-          Duration(seconds: 2)); // Simulasi delay 2 detik untuk merefresh data
-      // Lakukan proses refresh data di sini, misalnya dengan memanggil fungsi yang sesuai
-
-      // Sembunyikan tampilan loading setelah proses refresh selesai
+          Duration(seconds: 2)); 
       setState(() {
         isLoading = false;
       });
@@ -127,10 +122,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
       // Panggil callback onDataAdded jika ada
       widget.onDataAdded?.call();
 
-      // Tutup modal bottom sheet
       Navigator.of(context).pop();
     } else {
-      // Jika gagal menambahkan data, tampilkan snackbar dengan pesan kesalahan
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to add task. Please try again.')),
       );
