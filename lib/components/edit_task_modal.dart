@@ -4,30 +4,46 @@ import 'dart:convert';
 import 'select_time_page.dart';
 import 'add_description_page.dart';
 
-class AddTaskModal extends StatefulWidget {
-  final VoidCallback? onDataAdded;
+class TaskModal extends StatefulWidget {
+  final Map<String, String>? task;
 
-  const AddTaskModal({Key? key, this.onDataAdded}) : super(key: key);
+  const TaskModal({Key? key, this.task}) : super(key: key);
+
   @override
-  _AddTaskModalState createState() => _AddTaskModalState();
+  _TaskModalState createState() => _TaskModalState();
 }
 
-class _AddTaskModalState extends State<AddTaskModal> {
+class _TaskModalState extends State<TaskModal> {
   String description = '';
+  String time = '';
   String title = '';
   List<bool> isSelected = [false, false, false, false];
-  String? selectedTime;
   bool showError = false;
   bool isLoading = false;
   String? titleError;
   String? taskTypeError;
   String? timeError;
   String? descriptionError;
+  String? id;
 
-  void updateSelectedTime(String time) {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.task != null) {
+      title = widget.task!['title'] ?? '';
+      description = widget.task!['description'] ?? '';
+      time = '${widget.task!['time'] ?? ''} ${widget.task!['date'] ?? ''}';
+      id = widget.task!['id'] ?? '';
+      List<String> taskTypes = ['Work', 'Meeting', 'Family', 'Me'];
+      String? taskType = widget.task!['taskType'];
+      isSelected = List.generate(
+          taskTypes.length, (index) => taskTypes[index] == taskType);
+    }
+  }
+
+  void updateSelectedTime(String value) {
     setState(() {
-      selectedTime = time;
-      timeError = null;
+      time = value;
     });
   }
 
@@ -42,7 +58,13 @@ class _AddTaskModalState extends State<AddTaskModal> {
     });
   }
 
-  void postTaskData() async {
+  void updateDescription(String value) {
+    setState(() {
+      description = value;
+    });
+  }
+
+  void putTaskData() async {
     bool valid = true;
     if (title.isEmpty) {
       setState(() {
@@ -56,7 +78,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
       });
       valid = false;
     }
-    if (selectedTime == null) {
+    if (time.isEmpty) {
       setState(() {
         timeError = 'Time is required';
       });
@@ -84,13 +106,13 @@ class _AddTaskModalState extends State<AddTaskModal> {
       }
     }
 
-    final parts = selectedTime!.split('; ');
+    final parts = time.split('; ');
     final timePart = parts[0];
     final datePart = parts[1];
 
     final url = Uri.parse(
-        'https://66465c4951e227f23aaeb737.mockapi.io/api/ToDoListApp/timeLine');
-    final response = await http.post(
+        'https://66465c4951e227f23aaeb737.mockapi.io/api/ToDoListApp/timeLine/$id');
+    final response = await http.put(
       url,
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
@@ -108,31 +130,38 @@ class _AddTaskModalState extends State<AddTaskModal> {
       isLoading = false;
     });
 
-    if (response.statusCode == 201) {
-      // Menampilkan tampilan loading
-      setState(() {
-        isLoading = true;
-      });
-
-      // Lakukan proses refresh data
-      await Future.delayed(
-          Duration(seconds: 2)); // Simulasi delay 2 detik untuk merefresh data
-      // Lakukan proses refresh data di sini, misalnya dengan memanggil fungsi yang sesuai
-
-      // Sembunyikan tampilan loading setelah proses refresh selesai
-      setState(() {
-        isLoading = false;
-      });
-
-      // Panggil callback onDataAdded jika ada
-      widget.onDataAdded?.call();
-
-      // Tutup modal bottom sheet
+    if (response.statusCode == 200) {
       Navigator.of(context).pop();
     } else {
-      // Jika gagal menambahkan data, tampilkan snackbar dengan pesan kesalahan
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add task. Please try again.')),
+        SnackBar(content: Text('Failed to update task. Please try again.')),
+      );
+    }
+  }
+
+  void deleteTaskData() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    final url = Uri.parse(
+        'https://66465c4951e227f23aaeb737.mockapi.io/api/ToDoListApp/timeLine/$id');
+    final response = await http.delete(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+    );
+
+    setState(() {
+      isLoading = false;
+    });
+
+    if (response.statusCode == 200) {
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete task. Please try again.')),
       );
     }
   }
@@ -168,7 +197,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                   ),
                   child: ListTile(
                     title: Text(
-                      'Create New Task',
+                      widget.task == null ? 'Create New Task' : 'Edit Task',
                       style: TextStyle(fontFamily: 'PoppinsBold', fontSize: 24),
                     ),
                     trailing: IconButton(
@@ -191,6 +220,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                 child: TextField(
                   maxLines: null,
                   onChanged: (value) => validateTitle(value),
+                  controller: TextEditingController(text: title),
                   decoration: InputDecoration(
                     hintText: '   Enter task title...',
                     errorText: titleError,
@@ -230,64 +260,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                   height: 50,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
-                    children: [
-                      TaskTypeButton(
-                        title: 'Work',
-                        color: Colors.blue.withOpacity(0.1),
-                        fontColor: Colors.blue,
-                        isSelected: isSelected[0],
-                        onTap: () {
-                          setState(() {
-                            for (int i = 0; i < isSelected.length; i++) {
-                              isSelected[i] = i == 0;
-                            }
-                            taskTypeError = null;
-                          });
-                        },
-                      ),
-                      TaskTypeButton(
-                        title: 'Meeting',
-                        color: Colors.green.withOpacity(0.1),
-                        fontColor: Colors.green,
-                        isSelected: isSelected[1],
-                        onTap: () {
-                          setState(() {
-                            for (int i = 0; i < isSelected.length; i++) {
-                              isSelected[i] = i == 1;
-                            }
-                            taskTypeError = null;
-                          });
-                        },
-                      ),
-                      TaskTypeButton(
-                        title: 'Family',
-                        color: Colors.red.withOpacity(0.1),
-                        fontColor: Colors.red,
-                        isSelected: isSelected[2],
-                        onTap: () {
-                          setState(() {
-                            for (int i = 0; i < isSelected.length; i++) {
-                              isSelected[i] = i == 2;
-                            }
-                            taskTypeError = null;
-                          });
-                        },
-                      ),
-                      TaskTypeButton(
-                        title: 'Me',
-                        color: Colors.orange.withOpacity(0.1),
-                        fontColor: Colors.orange,
-                        isSelected: isSelected[3],
-                        onTap: () {
-                          setState(() {
-                            for (int i = 0; i < isSelected.length; i++) {
-                              isSelected[i] = i == 3;
-                            }
-                            taskTypeError = null;
-                          });
-                        },
-                      ),
-                    ],
+                    children: taskTypeButtons(),
                   ),
                 ),
               ),
@@ -310,10 +283,9 @@ class _AddTaskModalState extends State<AddTaskModal> {
                 padding: const EdgeInsets.only(left: 32, bottom: 6),
                 child: GestureDetector(
                   onTap: () async {
-                    final result = await Navigator.of(context).push(
-                      _createRoute(),
-                    );
-                    if (result != null) {
+                    final result =
+                        await Navigator.of(context).push(_createRoute());
+                    if (result != null && result is String) {
                       updateSelectedTime(result);
                     }
                   },
@@ -322,7 +294,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                       Icon(Icons.access_time),
                       SizedBox(width: 6),
                       Text(
-                        selectedTime ?? 'Add Time',
+                        time.isNotEmpty ? '$time' : 'Add Time',
                         style: TextStyle(
                           fontFamily: 'PoppinsMedium',
                           fontSize: 16,
@@ -347,11 +319,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
                   onTap: () async {
                     final result = await Navigator.of(context)
                         .push(_createDescriptionRoute());
-                    if (result != null) {
-                      setState(() {
-                        description = result;
-                        descriptionError = null;
-                      });
+                    if (result != null && result is String) {
+                      updateDescription(result);
                     }
                   },
                   child: Row(
@@ -379,39 +348,116 @@ class _AddTaskModalState extends State<AddTaskModal> {
                   ),
                 ),
               SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.only(
-                    top: 16, left: 32, right: 32, bottom: 32),
-                child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : postTaskData,
-                  icon: isLoading
-                      ? CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                      : Icon(Icons.add, color: Colors.white),
-                  label: Text(
-                    isLoading ? 'Adding...' : 'Add',
-                    style: TextStyle(
-                        fontFamily: 'PoppinsMedium',
-                        fontSize: 16,
-                        color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xCCF14A5B),
-                    shadowColor: Color(0xCCF14A5B),
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+              Row(
+                children: [
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(top: 16, left: 32, bottom: 32),
+                    child: SizedBox(
+                      width: 150,
+                      child: ElevatedButton.icon(
+                        onPressed: isLoading ? null : putTaskData,
+                        icon: isLoading
+                            ? CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              )
+                            : Icon(Icons.add, color: Colors.white),
+                        label: Text(
+                          isLoading ? 'Updating...' : 'Update',
+                          style: TextStyle(
+                              fontFamily: 'PoppinsMedium',
+                              fontSize: 16,
+                              color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xCCF14A5B),
+                          shadowColor: Color(0xCCF14A5B),
+                          padding: EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.only(
+                        top: 16, left: 32, right: 32, bottom: 32),
+                    child: SizedBox(
+                      width: 150,
+                      child: ElevatedButton.icon(
+                        onPressed: isLoading ? null : deleteTaskData,
+                        icon: isLoading
+                            ? CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              )
+                            : Icon(Icons.delete, color: Colors.white),
+                        label: Text(
+                          isLoading ? 'Deleting...' : 'Delete',
+                          style: TextStyle(
+                              fontFamily: 'PoppinsMedium',
+                              fontSize: 16,
+                              color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xCCB19CEC),
+                          shadowColor: Color(0xCCB19CEC),
+                          padding: EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> taskTypeButtons() {
+    List<Widget> buttons = [];
+    final taskTypes = ['Work', 'Meeting', 'Family', 'Me'];
+    for (int i = 0; i < taskTypes.length; i++) {
+      buttons.add(
+        TaskTypeButton(
+          title: taskTypes[i],
+          color: i == 0
+              ? Colors.blue.withOpacity(0.1)
+              : // Work
+              i == 1
+                  ? Colors.green.withOpacity(0.1)
+                  : // Meeting
+                  i == 2
+                      ? Colors.red.withOpacity(0.1)
+                      : // Family
+                      Colors.orange.withOpacity(0.1), // Me
+          fontColor: i == 0
+              ? Colors.blue
+              : i == 1
+                  ? Colors.green
+                  : i == 2
+                      ? Colors.red
+                      : Colors.orange,
+          isSelected: isSelected[i],
+          onTap: () {
+            setState(() {
+              for (int j = 0; j < isSelected.length; j++) {
+                isSelected[j] = j == i;
+              }
+              taskTypeError = null;
+            });
+          },
+        ),
+      );
+    }
+    return buttons;
   }
 }
 
@@ -477,20 +523,6 @@ Route _createRoute() {
   );
 }
 
-void showCustomModalBottomSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.only(
-        topLeft: Radius.circular(100.0),
-        topRight: Radius.circular(100.0),
-      ),
-    ),
-    builder: (context) => AddTaskModal(),
-  );
-}
-
 Route _createDescriptionRoute() {
   return PageRouteBuilder(
     pageBuilder: (context, animation, secondaryAnimation) =>
@@ -507,5 +539,19 @@ Route _createDescriptionRoute() {
         child: child,
       );
     },
+  );
+}
+
+void showCustomModalBottomSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(100.0),
+        topRight: Radius.circular(100.0),
+      ),
+    ),
+    builder: (context) => TaskModal(),
   );
 }

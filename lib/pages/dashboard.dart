@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:timelines/timelines.dart';
 import 'package:intl/intl.dart';
+import 'package:to_do_list_app/components/edit_task_modal.dart';
 
 void main() {
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Delivery Timeline',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
       home: Dashboard(),
     );
   }
@@ -47,13 +45,11 @@ class _DashboardState extends State<Dashboard> {
     try {
       String selectedDateFormatted =
           DateFormat("MMM dd, yyyy").format(_selectedDate);
-      print(_selectedDate);
       List<_DeliveryProcess> processes =
           await fetchDeliveryProcesses(selectedDateFormatted);
-      processes.add(const _DeliveryProcess.complete());
+      // processes.add(const _DeliveryProcess.complete());
       setState(() {
         _deliveryProcesses = processes;
-        _DeliveryProcess.complete();
       });
     } catch (e) {
       print('Failed to load delivery processes: $e');
@@ -80,7 +76,8 @@ class _DashboardState extends State<Dashboard> {
             _DeliveryProcess(
               task['taskType'],
               messages: [
-                _DeliveryMessage(addTime, task['title']),
+                _DeliveryMessage(addTime, task['title'], task['description'],
+                    task['date'], task['taskType'], task['id']),
               ],
             ),
           );
@@ -91,6 +88,25 @@ class _DashboardState extends State<Dashboard> {
     } else {
       throw Exception('Failed to load tasks');
     }
+  }
+
+  void showEditTaskModal(BuildContext context, Map<String, String> task,
+      Function(Map<String, String>) onTaskUpdated) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(100.0),
+          topRight: Radius.circular(100.0),
+        ),
+      ),
+      builder: (context) => TaskModal(
+        task: task,
+      ),
+    ).then((_) {
+      onTaskUpdated(task);
+    });
   }
 
   @override
@@ -135,7 +151,6 @@ class _DashboardState extends State<Dashboard> {
       ),
       body: Column(
         children: [
-          Text('$_selectedDate'),
           Container(
             height: 145,
             padding: const EdgeInsets.symmetric(vertical: 20),
@@ -172,7 +187,6 @@ class _DashboardState extends State<Dashboard> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Text('$selectedDateFormatted'),
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: isSelected
@@ -223,6 +237,37 @@ class _DashboardState extends State<Dashboard> {
                           children: [
                             _DeliveryProcesses(
                               processes: _deliveryProcesses,
+                              onTaskTap: (task) {
+                                showEditTaskModal(
+                                  context,
+                                  {
+                                    'id': task['id'] ?? '',
+                                    'title': task['title'] ?? '',
+                                    'taskType': task['taskType'] ?? '',
+                                    'time': task['time'] ?? '',
+                                    'date': task['date'] ?? '',
+                                    'description': task['description'] ?? '',
+                                  },
+                                  (updatedTask) {
+                                    setState(() {
+                                      _deliveryProcesses[index] =
+                                          _DeliveryProcess(
+                                        updatedTask['taskType']!,
+                                        messages: [
+                                          _DeliveryMessage(
+                                            updatedTask['time']!,
+                                            updatedTask['tile']!,
+                                            updatedTask['description']!,
+                                            updatedTask['date']!,
+                                            updatedTask['taskType']!,
+                                            updatedTask['id']!,
+                                          ),
+                                        ],
+                                      );
+                                    });
+                                  },
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -240,9 +285,11 @@ class _DashboardState extends State<Dashboard> {
 class _InnerTimeline extends StatelessWidget {
   const _InnerTimeline({
     required this.messages,
+    required this.onTaskTap,
   });
 
   final List<_DeliveryMessage> messages;
+  final Function(Map<String, dynamic>) onTaskTap;
 
   @override
   Widget build(BuildContext context) {
@@ -273,30 +320,41 @@ class _InnerTimeline extends StatelessWidget {
               return null;
             }
 
-            return Padding(
-              padding: EdgeInsets.only(left: 8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(messages[index - 1].createdAt,
-                          style: TextStyle(
-                              fontFamily: 'PoppinsSemiBold', fontSize: 12)),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(messages[index - 1].message,
-                                style: TextStyle(
-                                    fontFamily: 'PoppinsLight', fontSize: 12)),
-                          ],
+            return GestureDetector(
+              onTap: () => onTaskTap({
+                'title': messages[index - 1].message,
+                'time': messages[index - 1].createdAt,
+                'date': messages[index - 1].date,
+                'description': messages[index - 1].description,
+                'taskType': messages[index - 1].taskType,
+                'id': messages[index - 1].id,
+              }),
+              child: Padding(
+                padding: EdgeInsets.only(left: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(messages[index - 1].createdAt,
+                            style: TextStyle(
+                                fontFamily: 'PoppinsSemiBold', fontSize: 12)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(messages[index - 1].message,
+                                  style: TextStyle(
+                                      fontFamily: 'PoppinsLight',
+                                      fontSize: 12)),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -311,10 +369,12 @@ class _InnerTimeline extends StatelessWidget {
 }
 
 class _DeliveryProcesses extends StatelessWidget {
-  const _DeliveryProcesses({Key? key, required this.processes})
+  const _DeliveryProcesses(
+      {Key? key, required this.processes, required this.onTaskTap})
       : super(key: key);
 
   final List<_DeliveryProcess> processes;
+  final Function(Map<String, dynamic>) onTaskTap;
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +414,10 @@ class _DeliveryProcesses extends StatelessWidget {
                       style: DefaultTextStyle.of(context).style.copyWith(
                           fontSize: 18.0, fontFamily: 'PoppinsSemiBold'),
                     ),
-                    _InnerTimeline(messages: processes[index].messages),
+                    _InnerTimeline(
+                      messages: processes[index].messages,
+                      onTaskTap: onTaskTap,
+                    ),
                   ],
                 ),
               );
@@ -415,9 +478,9 @@ class _DeliveryProcess {
     this.messages = const [],
   });
 
-  const _DeliveryProcess.complete()
-      : this.name = 'Done',
-        this.messages = const [];
+  // const _DeliveryProcess.complete()
+  //     : this.name = 'Done',
+  //       this.messages = const [];
 
   final String name;
   final List<_DeliveryMessage> messages;
@@ -426,14 +489,19 @@ class _DeliveryProcess {
 }
 
 class _DeliveryMessage {
-  const _DeliveryMessage(this.createdAt, this.message);
+  const _DeliveryMessage(this.createdAt, this.message, this.description,
+      this.date, this.taskType, this.id);
 
   final String createdAt;
   final String message;
+  final String description;
+  final String date;
+  final String taskType;
+  final String id;
 
   @override
   String toString() {
-    return '$createdAt $message';
+    return '$createdAt $message $description $date';
   }
 }
 
